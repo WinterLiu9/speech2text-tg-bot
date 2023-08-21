@@ -81,6 +81,6 @@ class OpenaiAPI():
             self.texts.append(td.get('text'))
             if self.language == 'en' and self.need_translation:
                 self.translate_text(td.get('text'))
-        _write_file(self.folder + '/' + self.file.replace('.mp3', '.txt').replace('.m4a', '.txt'), "\n\n\n".join(self.texts))
+        _write_file(self.folder + '/' + self.file.replace('.mp3', '.txt').replace('.m4a', '.txt').replace('.ogg', '.txt'), "\n\n\n".join(self.texts))
         if self.language == 'en' and self.need_translation:
-            _write_file(self.folder + '/' + self.file.replace('.mp3', '_en_to_zh.txt').replace('.m4a', '_en_to_zh.txt'), "\n\n\n".join(self.translated_texts))
+            _write_file(self.folder + '/' + self.file.replace('.mp3', '_en_to_zh.txt').replace('.m4a', '_en_to_zh.txt').replace('.ogg', '_en_to_zh.txt'), "\n\n\n".join(self.translated_texts))

@@ -3,7 +3,7 @@ import telebot
 from gmail import GMailService
 from speech2text import OpenaiAPI, SplitWavAudioMubin
 from util import is_valid_email, load_yaml_file
-
+import uuid
 
 BOT_TOKEN = load_yaml_file('./config/config.yaml')['token']
 
@@ -23,16 +23,20 @@ class Speech:
 def send_welcome(message):
     msg = bot.reply_to(message, """\
 Hi there, I am a Speech2Text bot.
-Please upload your Audio file
+Please upload your Audio file or sent me a voice
 """)
     bot.register_next_step_handler(msg, process_file_step)
 
 def process_file_step(message):
     try:
         chat_id = message.chat.id
-        fileID = message.audio.file_id
+        try:
+            fileID = message.audio.file_id
+            file_name = message.audio.file_name
+        except Exception as e:
+            fileID = message.voice.file_id
+            file_name = f'{uuid.uuid4().hex}.ogg'
         print('fileId: ' + fileID)
-        file_name = message.audio.file_name
         print('file_name: ' + file_name)
         file_info = bot.get_file(fileID)
         downloaded_file = bot.download_file(file_info.file_path)
@@ -109,7 +113,13 @@ def process_email_step(message):
         mail = GMailService([email], f'[Speech2Text] {speech.file_name}', en_res+zh_res)
         mail.send_email()
 
-        bot.send_message(chat_id, f'file name: {speech.file_name}, language: {speech.language}, email: {speech.email}, need_translation: {speech.need_translation}')
+        res = f'''file name: {speech.file_name},
+language: {speech.language},
+email: {speech.email},
+need_translation: {speech.need_translation},
+en_res: {openai.texts},
+zh_res: {openai.translated_texts}        '''
+        bot.send_message(chat_id, res)
     except Exception as e:
         bot.reply_to(message, 'oooops')
 
