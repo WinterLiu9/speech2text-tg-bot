@@ -47,7 +47,7 @@ def process_file_step(message):
         speech_dict[chat_id] = speech
 
         markup = telebot.types.ReplyKeyboardMarkup(one_time_keyboard=True)
-        markup.add('English', 'Chinese')
+        markup.add('English\nno need translation', 'English\nneed translation', 'Chinese')
         msg = bot.reply_to(message, 'What is your language of your audio', reply_markup=markup)
 
         bot.register_next_step_handler(msg, process_language_step)
@@ -59,20 +59,19 @@ def process_language_step(message):
         chat_id = message.chat.id
         language = message.text
         speech = speech_dict[chat_id]
-        if language == u'English':
+        if language == u'English\nno need translation':
             speech.language = 'en'
+            speech.need_translation = False
+        elif language == u'English\nneed translation':
+            speech.language = 'en'
+            speech.need_translation = True
         elif language == u'Chinese':
             speech.language = 'zh'
+            speech.need_translation = False
         else:
             raise Exception("Unknown language")
-        if language == u'English':
-            markup = telebot.types.ReplyKeyboardMarkup(one_time_keyboard=True)
-            markup.add('Yes', 'No')
-            msg = bot.reply_to(message, 'Do you need Chinese translation? ', reply_markup=markup)
-            bot.register_next_step_handler(msg, process_translation_step)
-        else:
-            msg = bot.reply_to(message, 'What is your email? The result will be sent to your email within minutes.')
-            bot.register_next_step_handler(msg, process_email_step)
+        msg = bot.reply_to(message, 'Do you need to send the result to your email? If Yes, please enter your email. If No, please enter no')
+        bot.register_next_step_handler(msg, process_email_step)
     except Exception as e:
         bot.reply_to(message, 'oooops')
 
@@ -96,8 +95,8 @@ def process_email_step(message):
     try:
         chat_id = message.chat.id
         email = message.text
-        if not is_valid_email(email):
-            bot.send_message(chat_id, f'please enter the correct email address and re-strat')
+        #if not is_valid_email(email):
+           # bot.send_message(chat_id, f'please enter the correct email address and re-strat')
         speech = speech_dict[chat_id]
         speech.email = email
 
@@ -109,9 +108,9 @@ def process_email_step(message):
 
         en_res = openai.texts
         zh_res = openai.translated_texts
-
-        mail = GMailService([email], f'[Speech2Text] {speech.file_name}', en_res+zh_res)
-        mail.send_email()
+        if  is_valid_email(email):
+            mail = GMailService([email], f'[Speech2Text] {speech.file_name}', en_res+zh_res)
+            mail.send_email()
 
         res = f'''file name: {speech.file_name},
 language: {speech.language},
