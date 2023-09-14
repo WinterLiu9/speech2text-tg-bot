@@ -104,7 +104,7 @@ def process_email_step(message):
         split_wav.multiple_split(min_per_split=5)
 
         openai = OpenaiAPI('./media', speech.file_name, split_wav.split_files, speech.language, speech.need_translation)
-        openai.speech2text()
+        openai.speech2text_mutil()
 
         en_res = openai.texts
         zh_res = openai.translated_texts
@@ -120,6 +120,7 @@ en_res: {openai.texts},
 zh_res: {openai.translated_texts}        '''
         bot.send_message(chat_id, res)
     except Exception as e:
+        print(e)
         bot.reply_to(message, 'oooops')
 
 

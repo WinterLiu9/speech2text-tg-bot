@@ -2,7 +2,7 @@ import openai
 import pydub.playback
 from pydub import AudioSegment
 import math
-
+import concurrent.futures
 import platform
 
 from util import _write_file, load_yaml_file
@@ -84,3 +84,46 @@ class OpenaiAPI():
         _write_file(self.folder + '/' + self.file.replace('.mp3', '.txt').replace('.m4a', '.txt').replace('.ogg', '.txt'), "\n\n\n".join(self.texts))
         if self.language == 'en' and self.need_translation:
             _write_file(self.folder + '/' + self.file.replace('.mp3', '_en_to_zh.txt').replace('.m4a', '_en_to_zh.txt').replace('.ogg', '_en_to_zh.txt'), "\n\n\n".join(self.translated_texts))
+
+    def speech2text_mutil(self):
+        openai.api_key = self.api_key
+        self.texts = []  # Initialize an empty list for texts
+        self.translated_texts = []  # Initialize an empty list for translated texts
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            futures = []
+            translation_futures = []
+
+            for file in self.files:
+                futures.append(
+                    executor.submit(self.transcribe, file)
+                )
+
+            # Wait for all the futures to complete
+            for future in concurrent.futures.as_completed(futures):
+                result = future.result()
+                if result is not None:
+                    text = result
+                    self.texts.append(text)
+                    if self.language == 'en' and self.need_translation:
+                        translation_futures.append(
+                            executor.submit(self.translate_text, text)
+                        )
+
+            for future in concurrent.futures.as_completed(translation_futures):
+                translation_result = future.result()
+                if translation_result is not None:
+                    translated_text = translation_result
+                    self.translated_texts.append(translated_text)
+
+        _write_file(self.folder + '/' + self.file.replace('.mp3', '.txt').replace('.m4a', '.txt').replace('.ogg', '.txt'), "\n\n\n".join(self.texts))
+        if self.language == 'en' and self.need_translation:
+            _write_file(self.folder + '/' + self.file.replace('.mp3', '_en_to_zh.txt').replace('.m4a', '_en_to_zh.txt').replace('.ogg', '_en_to_zh.txt'), "\n\n\n".join(self.translated_texts))
+
+
+
+    def transcribe(self, file):
+        transcript = openai.Audio.transcribe("whisper-1", file, language=self.language)
+        td = transcript.to_dict()
+        print(td)
+        return td.get('text')
